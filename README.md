@@ -21,6 +21,22 @@ Prototipo académico para una posible PPS en INTA Coronel Suárez. El proyecto r
 
 Requiere Python 3.11 o posterior.
 
+### Abrirla en Windows con doble clic
+
+GitHub guarda el código, pero no ejecuta por sí solo una aplicación Python. Después de clonar el repositorio con GitHub Desktop, se puede abrir la carpeta local y hacer doble clic en `ABRIR_APP_WINDOWS.bat`. El primer inicio crea un entorno aislado, instala las dependencias y abre el tablero en el navegador. Puede demorar algunos minutos; los siguientes inicios son más rápidos.
+
+Si Windows informa que no encuentra Python, instalar Python 3.11 o posterior y marcar **Add Python to PATH** durante la instalación.
+
+### Publicarla como página web
+
+El repositorio incluye `requirements.txt` y `streamlit_app.py`, por lo que está preparado para Streamlit Community Cloud. Desde `https://share.streamlit.io` hay que vincular la cuenta de GitHub y crear una aplicación con estos datos:
+
+- Repositorio: `RamiroMeier9/Proyecto-Automatizacin-Agrop`
+- Rama: `main`
+- Archivo principal: `streamlit_app.py`
+
+La publicación crea una dirección terminada en `streamlit.app`. Las claves privadas se agregan después desde **App settings > Secrets**; nunca se escriben en GitHub.
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate        # En Windows: .venv\Scripts\activate
@@ -54,9 +70,11 @@ python -m unittest discover -s tests -v
 
 ## A3 Mercados
 
-El MVP consulta automáticamente los cierres agropecuarios que A3 expone en su visor de Market Data, incluidos precio de ajuste, último, volumen e interés abierto. Para la API formal se admite `A3_MD_API_KEY` mediante el header `x-api-key`; durante el desarrollo debe utilizarse UAT. También permanece disponible el conector Trading REST, que solicita un token con `X-Username` y `X-Password` y permite consultar una watchlist específica.
+El MVP consulta automáticamente los cierres agropecuarios que A3 expone en su visor de Market Data, incluidos precio de ajuste, último, volumen e interés abierto. Para la API formal se admite `A3_MD_API_KEY` mediante el header `x-api-key`; durante el desarrollo debe utilizarse UAT. Cuando existe esa variable, el flujo consulta el reporte formal y guarda la respuesta en `data/snapshots/a3_official_latest.json`, archivo privado ignorado por Git. También permanece disponible el conector Trading REST, que solicita un token con `X-Username` y `X-Password` y permite consultar una watchlist específica.
 
 Nunca se guardan credenciales dentro del repositorio. Si una integración no está disponible, se puede completar `data/manual/a3_quotes.csv` con una exportación controlada.
+
+La clave que se mostró previamente debe regenerarse antes de usarla. Para trabajar localmente se copia `.env.example` como `.env` y se completan `A3_MD_ENV=uat` y `A3_MD_API_KEY` con la clave nueva. Para GitHub Actions se crea un secreto del repositorio llamado `A3_MD_API_KEY`. Para Streamlit Community Cloud se usa la plantilla `.streamlit/secrets.toml.example` desde **App settings > Secrets**.
 
 La curva de futuros **no se presenta como un pronóstico seguro**. Refleja precios negociados hoy para distintos vencimientos y puede incorporar expectativas, costo de acarreo, tasa, estacionalidad, riesgo y base local. Las opciones permiten añadir información sobre volatilidad y escenarios, pero su interpretación exige liquidez suficiente.
 
