@@ -1,0 +1,18 @@
+study_id,treatment_id,treatment,grass_species,grass_cultivar,grass_dose_kg_ha,vicia_species,vicia_dose_kg_ha,notes
+inta_morris_2020_2021,T1,Cebada Trinidad con vicia villosa,Cebada,Trinidad,,Vicia villosa,,La síntesis pública no muestra las dosis de este tratamiento
+inta_morris_2020_2021,T2,Cebada Trinidad,Cebada,Trinidad,100,,,
+inta_morris_2020_2021,T3,Cebada Trinidad con vicia sativa,Cebada,Trinidad,53,Vicia sativa,50,
+inta_morris_2020_2021,T4,Avena Paloma,Avena,Paloma,72,,,
+inta_morris_2020_2021,T5,Avena Paloma con vicia villosa,Avena,Paloma,48,Vicia villosa,25,
+inta_morris_2020_2021,T6,Avena Paloma con vicia sativa,Avena,Paloma,23,Vicia sativa,50,
+inta_morris_2020_2021,T7,Avena Elizabeth,Avena,Elizabeth,72,,,
+inta_morris_2020_2021,T8,Avena Elizabeth con vicia villosa,Avena,Elizabeth,23,Vicia villosa,25,
+inta_morris_2020_2021,T9,Avena Elizabeth con vicia sativa,Avena,Elizabeth,23,Vicia sativa,50,
+inta_morris_2020_2021,T10,Centeno Emilio,Centeno,Emilio,63,,,
+inta_morris_2020_2021,T11,Centeno Emilio con vicia villosa,Centeno,Emilio,38,Vicia villosa,25,
+inta_morris_2020_2021,T12,Centeno Emilio con vicia sativa,Centeno,Emilio,13,Vicia sativa,50,
+inta_morris_2020_2021,T13,Triticale Ona,Triticale,Ona,96,,,
+inta_morris_2020_2021,T14,Triticale Ona con vicia villosa,Triticale,Ona,71,Vicia villosa,25,
+inta_morris_2020_2021,T15,Triticale Ona con vicia sativa,Triticale,Ona,46,Vicia sativa,50,La etiqueta de la fuente parece repetir VV pero la descripción indica vicia sativa
+inta_morris_2020_2021,T16,Vicia villosa,,,0,Vicia villosa,25,
+inta_morris_2020_2021,T17,Vicia sativa,,,0,Vicia sativa,50,

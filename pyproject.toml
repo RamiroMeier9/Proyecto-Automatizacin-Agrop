@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inta-forrajes"
+version = "0.1.0"
+description = "Evaluación económica reproducible de alternativas forrajeras para una PPS académica"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Ramiro Damián Meier" }]
+dependencies = []
+
+[project.optional-dependencies]
+app = [
+  "pandas>=2.2,<3",
+  "plotly>=5.24,<7",
+  "streamlit>=1.40,<2",
+]
+dev = ["pytest>=8,<10"]
+
+[project.scripts]
+inta-forrajes = "inta_forrajes.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

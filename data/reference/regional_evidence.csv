@@ -1,0 +1,16 @@
+study_id,observation_id,year,alternative_id,metric,value,value_low,value_high,standard_deviation,unit,rainfall_mm,location,notes
+inta_arroquy_2023,cost_loma_conv,2023,pastura_loma_convencional,implantation_cost,55505,,,,ARS_2023_per_ha,,Coronel Suárez,Sin IVA y sin costo de oportunidad de la tierra
+inta_arroquy_2023,cost_loma_direct,2023,pastura_loma_directa,implantation_cost,59789,,,,ARS_2023_per_ha,,Coronel Suárez,Sin IVA y sin costo de oportunidad de la tierra
+inta_arroquy_2023,cost_bajo_direct,2023,pastura_bajo_directa,implantation_cost,59343,,,,ARS_2023_per_ha,,Coronel Suárez,Sin IVA y sin costo de oportunidad de la tierra
+inta_arroquy_2023,cost_avena,2023,avena_directa,implantation_cost,32206,,,,ARS_2023_per_ha,,Coronel Suárez,Sin IVA y sin costo de oportunidad de la tierra
+inta_arroquy_2023,cost_avena_vicia,2023,avena_vicia_directa,implantation_cost,43153,,,,ARS_2023_per_ha,,Coronel Suárez,Sin IVA y sin costo de oportunidad de la tierra
+inta_arroquy_2023,cost_cebada,2023,cebada_directa,implantation_cost,33602,,,,ARS_2023_per_ha,,Coronel Suárez,Sin IVA y sin costo de oportunidad de la tierra
+inta_arroquy_2023,cost_triticale,2023,triticale_directa,implantation_cost,36978,,,,ARS_2023_per_ha,,Coronel Suárez,Sin IVA y sin costo de oportunidad de la tierra
+inta_arroquy_2023,yield_pastures,2023,pasturas_perennes,dry_matter_yield,,6000,10000,,kg_DM_per_ha_year,,Coronel Suárez,Rango modal informado
+inta_arroquy_2023,yield_annuals,2023,verdeos_anuales,dry_matter_yield,,3000,7000,,kg_DM_per_ha_cycle,,Coronel Suárez,Rango modal informado
+inta_arroquy_2023,maintenance_pasture,2023,pasturas_perennes,annual_maintenance_cost,26494,,,,ARS_2023_per_ha_year,,Coronel Suárez,A partir del segundo año
+inta_arroquy_2023,fx_reference,2023,macro_context,exchange_rate,194,,,,ARS_per_USD,,Coronel Suárez,Cotización BNA del 1 de febrero de 2023
+inta_arroquy_2023,fuel_reference,2023,macro_context,diesel_price,206.7,,,,ARS_per_liter,,Coronel Suárez,Referencia utilizada por el informe
+inta_arroquy_2023,uta_reference,2023,macro_context,uta_price,7648,,,,ARS_per_ha,,Coronel Suárez,UTA de contratistas
+inta_morris_2020_2021,mean_yield_2020,2020,all_trial_treatments,dry_matter_yield,9376,,,1490,kg_DM_per_ha,587,Establecimiento El Sendero - Coronel Suárez,Promedio de los tratamientos
+inta_morris_2020_2021,mean_yield_2021,2021,all_trial_treatments,dry_matter_yield,5903,,,1590,kg_DM_per_ha,430,Establecimiento El Sendero - Coronel Suárez,Promedio de los tratamientos y 27 por ciento menos lluvia

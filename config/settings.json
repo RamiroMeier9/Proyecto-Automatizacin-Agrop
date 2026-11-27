@@ -1,0 +1,21 @@
+{
+  "project": {
+    "name": "Evaluación económica de alternativas forrajeras",
+    "location": "Coronel Suárez, Buenos Aires",
+    "currency": "ARS",
+    "discount_rate_annual": 0.1
+  },
+  "automation": {
+    "stale_after_days": {
+      "bcra": 3,
+      "sio_granos": 7,
+      "a3": 2,
+      "manual": 30
+    }
+  },
+  "interpretation": {
+    "futures_are_forecasts": false,
+    "require_source_date": true,
+    "missing_prices_are_zero": false
+  }
+}

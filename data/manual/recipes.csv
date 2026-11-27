@@ -1,0 +1,33 @@
+alternative_id,year,category,item,quantity,unit,price_series_id,manual_unit_price,currency,notes
+pastura_loma_convencional,0,semilla,Alfalfa,8,kg,SEMILLA_ALFALFA,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_loma_convencional,0,semilla,Cebadilla,6,kg,SEMILLA_CEBADILLA,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_loma_convencional,0,semilla,Pasto ovillo,5,kg,SEMILLA_PASTO_OVILLO,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_loma_convencional,0,labor,Labores de implantación,1,ha,LABOR_SIEMBRA_CONVENCIONAL,,ARS,Validar secuencia y UTA
+pastura_loma_convencional,1,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Desde el segundo año calendario
+pastura_loma_convencional,2,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_loma_convencional,3,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_loma_convencional,4,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_loma_directa,0,semilla,Alfalfa,8,kg,SEMILLA_ALFALFA,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_loma_directa,0,semilla,Cebadilla,6,kg,SEMILLA_CEBADILLA,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_loma_directa,0,semilla,Pasto ovillo,5,kg,SEMILLA_PASTO_OVILLO,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_loma_directa,0,labor,Siembra directa,1,ha,LABOR_SIEMBRA_DIRECTA,,ARS,Validar secuencia y UTA
+pastura_loma_directa,1,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Desde el segundo año calendario
+pastura_loma_directa,2,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_loma_directa,3,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_loma_directa,4,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_bajo_directa,0,semilla,Agropiro,25,kg,SEMILLA_AGROPIRO,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_bajo_directa,0,semilla,Lotus tenuis,2,kg,SEMILLA_LOTUS,,ARS,Dosis del informe INTA 2023; revalidar
+pastura_bajo_directa,0,labor,Siembra directa,1,ha,LABOR_SIEMBRA_DIRECTA,,ARS,Validar secuencia y UTA
+pastura_bajo_directa,1,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Desde el segundo año calendario
+pastura_bajo_directa,2,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_bajo_directa,3,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+pastura_bajo_directa,4,mantenimiento,Mantenimiento anual,1,ha,MANTENIMIENTO_ANUAL,,ARS,Actualizar composición
+avena_directa,0,semilla,Avena,90,kg,SEMILLA_AVENA,,ARS,Dosis del informe INTA 2023; revalidar
+avena_directa,0,labor,Siembra directa,1,ha,LABOR_SIEMBRA_DIRECTA,,ARS,Validar secuencia y UTA
+avena_vicia_directa,0,semilla,Avena,63,kg,SEMILLA_AVENA,,ARS,Dosis del informe INTA 2023; revalidar
+avena_vicia_directa,0,semilla,Vicia,27,kg,SEMILLA_VICIA,,ARS,Dosis del informe INTA 2023; revalidar especie
+avena_vicia_directa,0,labor,Siembra directa,1,ha,LABOR_SIEMBRA_DIRECTA,,ARS,Validar secuencia y UTA
+cebada_directa,0,semilla,Cebada forrajera,90,kg,SEMILLA_CEBADA,,ARS,Dosis del informe INTA 2023; revalidar
+cebada_directa,0,labor,Siembra directa,1,ha,LABOR_SIEMBRA_DIRECTA,,ARS,Validar secuencia y UTA
+triticale_directa,0,semilla,Triticale,110,kg,SEMILLA_TRITICALE,,ARS,Dosis del informe INTA 2023; revalidar
+triticale_directa,0,labor,Siembra directa,1,ha,LABOR_SIEMBRA_DIRECTA,,ARS,Validar secuencia y UTA

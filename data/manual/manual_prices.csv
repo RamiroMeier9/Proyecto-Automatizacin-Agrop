@@ -1,0 +1,15 @@
+observed_at,series_id,item,value,currency,unit,source,source_url,notes
+,SEMILLA_ALFALFA,Semilla de alfalfa,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_CEBADILLA,Semilla de cebadilla,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_PASTO_OVILLO,Semilla de pasto ovillo,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_AGROPIRO,Semilla de agropiro,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_LOTUS,Semilla de lotus,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_AVENA,Semilla de avena,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_VICIA,Semilla de vicia,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_CEBADA,Semilla de cebada,,ARS,kg,manual,,Completar con presupuesto y fecha
+,SEMILLA_TRITICALE,Semilla de triticale,,ARS,kg,manual,,Completar con presupuesto y fecha
+,FERTILIZANTE_BASE,Fertilizante de base,,ARS,kg,manual,,Definir producto con INTA
+,HERBICIDA_BARBECHO,Herbicida de barbecho,,ARS,l,manual,,Definir producto y dosis con INTA
+,LABOR_SIEMBRA_DIRECTA,Labor de siembra directa,,ARS,ha,manual,,Presupuesto local
+,LABOR_SIEMBRA_CONVENCIONAL,Labor de siembra convencional,,ARS,ha,manual,,Presupuesto local
+,MANTENIMIENTO_ANUAL,Mantenimiento anual de pastura,,ARS,ha,manual,,Validar composición
