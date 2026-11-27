@@ -4,12 +4,12 @@ import csv
 import json
 import os
 from dataclasses import asdict, dataclass, replace
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Callable
 
 from .connectors.a3 import A3Connector
-from .connectors.a3_marketdata import A3AgroMarketDataConnector
+from .connectors.a3_marketdata import A3AgroMarketDataConnector, A3OfficialAPIKeyConnector
 from .connectors.bcra import BCRAConnector
 from .connectors.sio_granos import SIOGranosConnector
 from .csv_io import (
@@ -128,6 +128,11 @@ class ProjectPaths:
     def public_snapshot(self) -> Path:
         return self.root / "data" / "public" / "latest.json"
 
+    @property
+    def official_a3_snapshot(self) -> Path:
+        """Respuesta autenticada de A3; nunca se versiona ni se publica."""
+        return self.root / "data" / "snapshots" / "a3_official_latest.json"
+
 
 class Pipeline:
     def __init__(self, root: str | Path | None = None) -> None:
@@ -182,6 +187,64 @@ class Pipeline:
             "skipped": skipped,
         }
 
+    def _update_a3_official_report(self) -> dict:
+        """Consulta la API-Key formal y conserva la respuesta fuera del repositorio."""
+        api_key = os.getenv("A3_MD_API_KEY", "").strip()
+        if not api_key:
+            return {
+                "source": "a3_marketdata_official",
+                "status": "skipped",
+                "rows": 0,
+                "message": "falta A3_MD_API_KEY",
+            }
+
+        environment = os.getenv("A3_MD_ENV", "uat").strip().lower() or "uat"
+        started = self._now()
+        try:
+            report_date = date.today()
+            report = A3OfficialAPIKeyConnector(
+                api_key,
+                environment=environment,
+            ).fetch_final_report(report_date)
+            self.paths.official_a3_snapshot.parent.mkdir(parents=True, exist_ok=True)
+            self.paths.official_a3_snapshot.write_text(
+                json.dumps(
+                    {
+                        "generated_at": self._now(),
+                        "report_date": report_date.isoformat(),
+                        "environment": environment,
+                        "data": report,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                    default=str,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            rows = len(report) if isinstance(report, list) else 1
+            status = "ok"
+            message = str(self.paths.official_a3_snapshot)
+        except Exception as exc:
+            rows = 0
+            status = "error"
+            message = str(exc)
+        finished = self._now()
+        self.storage.log_sync(
+            "a3_marketdata_official",
+            started,
+            finished,
+            status,
+            rows,
+            message,
+        )
+        return {
+            "source": "a3_marketdata_official",
+            "status": status,
+            "rows": rows,
+            "message": message,
+        }
+
     def update(self, source: str = "all") -> list[dict]:
         requested = source.lower()
         results: list[dict] = []
@@ -215,6 +278,7 @@ class Pipeline:
                     self.storage.upsert_a3_quotes,
                 )
             )
+            results.append(self._update_a3_official_report())
             username, password = os.getenv("A3_USERNAME", ""), os.getenv("A3_PASSWORD", "")
             watchlist = read_watchlist(self.paths.watchlist)
             if username and password and watchlist:
