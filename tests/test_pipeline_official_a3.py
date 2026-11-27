@@ -52,6 +52,51 @@ class OfficialA3PipelineTests(unittest.TestCase):
             self.assertEqual(result["status"], "skipped")
             self.assertFalse(pipeline.paths.official_a3_snapshot.exists())
 
+    def test_public_snapshot_is_loaded_into_local_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            public_file = root / "data" / "public" / "latest.json"
+            public_file.parent.mkdir(parents=True)
+            public_file.write_text(
+                json.dumps(
+                    {
+                        "prices": [
+                            {
+                                "observed_at": "2026-11-27",
+                                "series_id": "FX_BCRA_USD_ARS",
+                                "item": "Dólar",
+                                "value": 1500,
+                                "currency": "ARS",
+                                "unit": "ARS/USD",
+                                "source": "bcra",
+                                "source_url": "https://www.bcra.gob.ar/",
+                                "metadata": {},
+                            }
+                        ],
+                        "a3_quotes": [
+                            {
+                                "as_of": "2026-11-27",
+                                "symbol": "MAI.ROS/ABR27",
+                                "market_id": "A3",
+                                "instrument_type": "future",
+                                "underlying": "MAI.ROS",
+                                "maturity_date": "2027-04-30",
+                                "settlement": 180,
+                                "source_url": "https://marketdata.mae.com.ar/",
+                                "metadata": {},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            pipeline = Pipeline(root)
+            result = pipeline.import_public_snapshot()
+            self.assertEqual(result["prices"], 1)
+            self.assertEqual(result["a3_quotes"], 1)
+            self.assertEqual(pipeline.storage.latest_prices()[0]["value"], 1500)
+            self.assertEqual(pipeline.storage.latest_a3_quotes()[0]["symbol"], "MAI.ROS/ABR27")
+
 
 if __name__ == "__main__":
     unittest.main()
