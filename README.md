@@ -10,7 +10,7 @@ Prototipo académico para una posible PPS en INTA Coronel Suárez. El proyecto r
 - Actualiza automáticamente el tipo de cambio de referencia desde la API pública del BCRA.
 - Integra SIO-Granos cuando se proporcionan CUIT y token.
 - Actualiza cierres históricos de futuros y opciones agropecuarias desde el visor de A3.
-- Deja preparada la API formal de A3 mediante `x-api-key` y la conexión Trading REST para una etapa posterior.
+- Integra la API formal de A3 mediante `x-api-key` cuando se configura el secreto y mantiene su respuesta fuera de los archivos públicos.
 - Cataloga trabajos regionales, campañas, tratamientos y condiciones ambientales para no comparar evidencia incompatible.
 - Permite importar precios, coeficientes técnicos y cotizaciones de A3 mediante CSV cuando no existe API o el acceso todavía no fue habilitado.
 - Calcula costo por hectárea, costo anual equivalente, costo por kg de materia seca aprovechada, costo por kg de carne equivalente, valor actual neto y punto de equilibrio.
@@ -103,6 +103,6 @@ El archivo público se genera con una lista cerrada de campos y fuentes. No incl
 2. Regenerar la API-Key compartida, configurar UAT como secreto y obtener el token de SIO-Granos.
 3. Añadir combustibles, clima y precios locales con conectores separados y pruebas de calidad.
 4. Incorporar escenarios climáticos y productivos, no un único rendimiento promedio.
-5. Publicar el repositorio sólo después de definir privacidad, licencia y responsable de mantenimiento.
+5. Revisar periódicamente la privacidad, la licencia y la persona responsable del mantenimiento.
 
 La arquitectura y el diccionario de datos están en `docs/`.
