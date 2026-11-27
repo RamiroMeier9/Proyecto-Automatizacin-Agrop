@@ -56,6 +56,12 @@ El núcleo de cálculo y las pruebas usan únicamente la biblioteca estándar. S
 3. El motor económico toma cantidades técnicas de `recipes.csv` y las vincula con precios mediante `price_series_id`.
 4. El tablero muestra faltantes de precio o de coeficientes; no los reemplaza silenciosamente por cero.
 
+## Interfaz del panel
+
+La aplicación está organizada en seis secciones en español: inicio, costos y escenarios, mercados A3, carga manual, base regional y calidad de datos. Los antecedentes conservan su trazabilidad en los archivos técnicos, pero la interfaz presenta resultados agregados y no exhibe nombres personales.
+
+Los precios locales se completan en una tabla editable y se guardan con fecha, moneda y unidad. También pueden editarse los supuestos productivos de cada alternativa. En una copia local, los cambios quedan en SQLite y en los CSV del proyecto; la pantalla permite descargar un respaldo cuando se utiliza una publicación web.
+
 Comandos principales:
 
 ```bash
