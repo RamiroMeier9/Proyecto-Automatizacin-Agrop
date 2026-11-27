@@ -1,34 +1,212 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+import json
+import math
+import os
+import re
+import unicodedata
+from dataclasses import replace
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from inta_forrajes.csv_io import read_alternatives
+from inta_forrajes.csv_io import read_alternatives, read_rows
 from inta_forrajes.evidence import EvidenceCatalog
 from inta_forrajes.forward_curve import build_forward_curve, option_implied_volatility
+from inta_forrajes.models import PriceObservation
 from inta_forrajes.pipeline import Pipeline
 
 
 ROOT = Path(__file__).resolve().parent
-pipeline = Pipeline(ROOT)
 
-st.set_page_config(page_title="INTA Forrajes", page_icon="🌱", layout="wide")
-st.title("Evaluación económica de alternativas forrajeras")
-st.caption("Prototipo académico para discusión con INTA Coronel Suárez — no es una recomendación oficial.")
+st.set_page_config(
+    page_title="Panel agropecuario regional",
+    page_icon="🌾",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+st.markdown(
+    """
+    <style>
+    :root {
+        --verde-900: #143d32;
+        --verde-700: #23624e;
+        --verde-500: #3f8a6b;
+        --tinta: #1e2d29;
+        --gris: #63706b;
+        --borde: #dce6e1;
+        --fondo: #f6f9f7;
+    }
+    .stApp { background: var(--fondo); color: var(--tinta); }
+    .block-container { max-width: 1280px; padding-top: 1.6rem; padding-bottom: 3rem; }
+    [data-testid="stSidebar"] { background: #eef5f1; border-right: 1px solid var(--borde); }
+    h1, h2, h3 { color: var(--verde-900); letter-spacing: -0.02em; }
+    p, label, [data-testid="stMarkdownContainer"] { line-height: 1.55; }
+    .hero {
+        background: linear-gradient(125deg, #143d32 0%, #23624e 62%, #3f8a6b 100%);
+        border-radius: 22px;
+        padding: 2.2rem 2.4rem;
+        color: white;
+        margin-bottom: 1.35rem;
+        box-shadow: 0 16px 40px rgba(20, 61, 50, 0.16);
+    }
+    .hero h1 { color: white; font-size: clamp(2rem, 4vw, 3.2rem); margin: 0.25rem 0 0.65rem; }
+    .hero p { color: #e7f4ee; max-width: 820px; font-size: 1.05rem; margin: 0; }
+    .eyebrow { font-size: 0.78rem; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; color: #bfe3d3; }
+    .page-kicker { color: var(--verde-700); font-size: 0.78rem; font-weight: 750; letter-spacing: 0.11em; text-transform: uppercase; margin-bottom: 0.25rem; }
+    .page-subtitle { color: var(--gris); font-size: 1.02rem; margin-top: -0.45rem; margin-bottom: 1.25rem; max-width: 900px; }
+    [data-testid="stMetric"] {
+        background: white;
+        border: 1px solid var(--borde);
+        border-radius: 16px;
+        padding: 1rem 1.05rem;
+        box-shadow: 0 7px 22px rgba(31, 75, 61, 0.055);
+    }
+    [data-testid="stMetricLabel"] { color: var(--gris); }
+    [data-testid="stMetricValue"] { color: var(--verde-900); }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: white;
+        border-color: var(--borde) !important;
+        border-radius: 16px;
+        box-shadow: 0 7px 20px rgba(31, 75, 61, 0.045);
+    }
+    .stButton > button, .stDownloadButton > button {
+        border-radius: 10px;
+        min-height: 2.65rem;
+        border-color: #aec8bc;
+        font-weight: 650;
+    }
+    .stButton > button[kind="primary"] { background: var(--verde-700); border-color: var(--verde-700); }
+    [data-baseweb="tab-list"] { gap: 0.35rem; }
+    [data-baseweb="tab"] { border-radius: 10px; padding-left: 1rem; padding-right: 1rem; }
+    footer { visibility: hidden; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+def titulo_pagina(seccion: str, titulo: str, descripcion: str) -> None:
+    st.markdown(f'<div class="page-kicker">{seccion}</div>', unsafe_allow_html=True)
+    st.title(titulo)
+    st.markdown(f'<div class="page-subtitle">{descripcion}</div>', unsafe_allow_html=True)
+
+
+def numero(valor: object) -> float | None:
+    if valor is None:
+        return None
+    try:
+        convertido = float(valor)
+    except (TypeError, ValueError):
+        return None
+    return None if math.isnan(convertido) else convertido
+
+
+def moneda(valor: float | None, codigo: str = "ARS", decimales: int = 0) -> str:
+    if valor is None:
+        return "Sin dato"
+    simbolo = "US$" if codigo.upper() == "USD" else "$"
+    formateado = f"{valor:,.{decimales}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{simbolo} {formateado}"
+
+
+def fecha_visible(valor: object) -> str:
+    if not valor:
+        return "Sin actualización"
+    parsed = pd.to_datetime(valor, errors="coerce")
+    if pd.isna(parsed):
+        return str(valor)
+    return parsed.strftime("%d/%m/%Y %H:%M")
+
+
+def codigo_manual(nombre: str) -> str:
+    normalizado = unicodedata.normalize("NFKD", nombre).encode("ascii", "ignore").decode("ascii")
+    normalizado = re.sub(r"[^A-Za-z0-9]+", "_", normalizado).strip("_").upper()
+    return f"MANUAL_{normalizado or 'INSUMO'}"
+
+
+def nombre_producto(codigo: str) -> str:
+    texto = (codigo or "").upper()
+    if "MAI" in texto:
+        return "Maíz"
+    if "SOJ" in texto:
+        return "Soja"
+    if "TRI" in texto:
+        return "Trigo"
+    if "DOL" in texto or "DLR" in texto:
+        return "Dólar"
+    return codigo or "Sin clasificar"
+
+
+def precio_referencia(fila: dict) -> float | None:
+    for campo in ("settlement", "last", "bid", "ask"):
+        valor = numero(fila.get(campo))
+        if valor is not None:
+            return valor
+    return None
+
+
+FUENTES = {
+    "bcra": "Tipo de cambio BCRA",
+    "a3_agro_marketdata": "Futuros y opciones A3",
+    "a3_marketdata_official": "Reporte autenticado A3",
+    "a3_trading_realtime": "Mercado A3 en tiempo real",
+    "sio_granos": "Operaciones SIO-Granos",
+    "manual_csv": "Datos cargados manualmente",
+}
+
+ESTADOS = {
+    "ok": "Actualizada",
+    "skipped": "Pendiente de credencial",
+    "error": "Revisar conexión",
+}
+
+
+pipeline = Pipeline(ROOT)
+if "datos_iniciales_cargados" not in st.session_state:
+    pipeline.import_public_snapshot()
+    pipeline.import_manual()
+    st.session_state["datos_iniciales_cargados"] = True
+
 
 with st.sidebar:
-    st.header("Actualización")
-    if st.button("Importar archivos manuales", width="stretch"):
-        result = pipeline.import_manual()
-        st.success(f"Importados: {result['prices']} precios y {result['a3_quotes']} cotizaciones")
-    if st.button("Actualizar fuentes", width="stretch"):
-        with st.spinner("Consultando fuentes habilitadas…"):
-            st.json(pipeline.update())
-    st.caption("Las fuentes sin credenciales se omiten y quedan identificadas.")
+    st.markdown("## 🌾 Panel Agro")
+    st.caption("Coronel Suárez · costos, escenarios y mercados")
+    pagina = st.radio(
+        "Navegación",
+        [
+            "Inicio",
+            "Costos y escenarios",
+            "Mercados A3",
+            "Carga manual",
+            "Base regional",
+            "Calidad de datos",
+        ],
+        label_visibility="collapsed",
+    )
+    st.divider()
+    if st.button("Actualizar todas las fuentes", type="primary", width="stretch"):
+        with st.spinner("Consultando las fuentes habilitadas…"):
+            resultado_actualizacion = pipeline.update()
+            pipeline.write_public_snapshot()
+        st.session_state["ultima_actualizacion_manual"] = resultado_actualizacion
+
+    resultado_actualizacion = st.session_state.get("ultima_actualizacion_manual")
+    if resultado_actualizacion:
+        correctas = sum(item["status"] == "ok" for item in resultado_actualizacion)
+        errores = sum(item["status"] == "error" for item in resultado_actualizacion)
+        if errores:
+            st.warning(f"{correctas} fuentes actualizadas y {errores} para revisar.")
+        else:
+            st.success(f"{correctas} fuentes actualizadas.")
+    st.caption(
+        "Las fuentes con credenciales se activan automáticamente cuando el secreto correspondiente está configurado."
+    )
+
 
 prices = pipeline.storage.latest_prices()
 quotes = pipeline.storage.latest_a3_quotes()
@@ -36,187 +214,579 @@ sync_status = pipeline.storage.sync_status()
 alternatives = read_alternatives(ROOT / "data" / "manual" / "alternatives.csv")
 evidence_catalog = EvidenceCatalog(ROOT / "data" / "reference")
 
-summary_tab, evidence_tab, costs_tab, futures_tab, options_tab, data_tab, quality_tab = st.tabs(
-    ["Resumen", "Evidencia regional", "Costos", "Futuros", "Opciones", "Datos", "Calidad"]
-)
 
-with summary_tab:
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Series de precios", len(prices))
-    col2.metric("Contratos A3", len(quotes))
-    col3.metric("Alternativas", len(alternatives))
-    pending = sum(item.validation_status.lower() != "validado" for item in alternatives)
-    col4.metric("Alternativas por validar", pending)
-    st.info(
-        "El tablero conserva la diferencia entre datos de mercado, presupuestos manuales y "
-        "supuestos técnicos. Un faltante se muestra como faltante; nunca se reemplaza por cero."
+if pagina == "Inicio":
+    st.markdown(
+        """
+        <section class="hero">
+            <div class="eyebrow">Herramienta de evaluación regional</div>
+            <h1>Decisiones forrajeras con números claros</h1>
+            <p>Un panel para reunir costos actuales, supuestos productivos, antecedentes regionales y señales de los mercados de futuros. Los datos automáticos y los datos manuales se mantienen diferenciados.</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
     )
+    futuros = [fila for fila in quotes if fila.get("instrument_type") == "future"]
+    opciones = [fila for fila in quotes if fila.get("instrument_type") == "option"]
+    manuales = [fila for fila in prices if fila.get("source") == "manual"]
+    metricas = st.columns(4)
+    metricas[0].metric("Alternativas productivas", len(alternatives))
+    metricas[1].metric("Contratos de futuros", len(futuros))
+    metricas[2].metric("Opciones registradas", len(opciones))
+    metricas[3].metric("Precios manuales completos", len(manuales))
 
-with evidence_tab:
-    studies = evidence_catalog.studies()
-    observations = evidence_catalog.observations()
-    treatments = evidence_catalog.treatments()
-    coverage = evidence_catalog.coverage()
-    cols = st.columns(4)
-    cols[0].metric("Trabajos catalogados", coverage["studies"])
-    cols[1].metric("Observaciones", coverage["observations"])
-    cols[2].metric("Años con datos", coverage["years"])
-    cols[3].metric("Tratamientos", coverage["treatments"])
+    st.subheader("Estado de la información")
+    estados_por_fuente = {fila["source"]: fila for fila in sync_status}
+    tarjetas = st.columns(3)
+    for columna, clave in zip(tarjetas, ["a3_agro_marketdata", "bcra", "manual_csv"]):
+        estado = estados_por_fuente.get(clave)
+        with columna.container(border=True):
+            st.markdown(f"**{FUENTES[clave]}**")
+            if estado:
+                st.write(ESTADOS.get(estado["status"], estado["status"]))
+                st.caption(f"Último proceso: {fecha_visible(estado['finished_at'])}")
+                st.caption(f"Registros incorporados: {estado['rows_written']}")
+            else:
+                st.write("Todavía sin ejecutar")
+                st.caption("Usá el botón de actualización o completá los datos manuales.")
 
-    st.subheader("Trabajos y alcance")
-    st.dataframe(pd.DataFrame(studies), width="stretch", hide_index=True)
-
-    cost_rows = [row for row in observations if row.get("metric") == "implantation_cost"]
-    if cost_rows:
-        cost_frame = pd.DataFrame(cost_rows)
-        cost_frame["value"] = pd.to_numeric(cost_frame["value"], errors="coerce")
-        figure = px.bar(
-            cost_frame,
-            x="alternative_id",
-            y="value",
-            title="Costos publicados por INTA en 2023 — referencia histórica",
+    izquierda, derecha = st.columns([1.25, 1])
+    with izquierda.container(border=True):
+        st.subheader("Qué responde el panel")
+        st.write(
+            "Permite estimar cuánto cuesta implantar y mantener cada alternativa, cuánto representa por kilogramo de materia seca y cómo cambia el resultado cuando varían rendimiento, tasa o precios."
         )
-        figure.update_layout(xaxis_title="Alternativa", yaxis_title="ARS de 2023 por ha")
-        st.plotly_chart(figure, width="stretch")
-
-    annual_rows = [row for row in observations if row.get("observation_id", "").startswith("mean_yield_")]
-    if annual_rows:
-        annual_frame = pd.DataFrame(annual_rows)
-        annual_frame["value"] = pd.to_numeric(annual_frame["value"], errors="coerce")
-        annual_frame["rainfall_mm"] = pd.to_numeric(annual_frame["rainfall_mm"], errors="coerce")
-        yield_figure = px.scatter(
-            annual_frame,
-            x="rainfall_mm",
-            y="value",
-            text="year",
-            title="Ensayo El Sendero: lluvia y rendimiento medio observado",
+        st.write(
+            "La curva de futuros aporta una referencia sobre precios pactados hoy para distintos vencimientos. No se interpreta como una predicción segura."
         )
-        yield_figure.update_traces(marker={"size": 14})
-        yield_figure.update_layout(xaxis_title="Precipitación durante la evaluación (mm)", yaxis_title="kg MS/ha")
-        st.plotly_chart(yield_figure, width="stretch")
-        st.caption("Son sólo dos campañas: la figura describe lo observado y no prueba por sí sola causalidad.")
+    with derecha.container(border=True):
+        st.subheader("Para completar un cálculo")
+        st.write("1. Actualizá las fuentes automáticas.")
+        st.write("2. Cargá los precios locales faltantes.")
+        st.write("3. Revisá los supuestos productivos.")
+        st.write("4. Compará escenarios en Costos y escenarios.")
 
-    with st.expander("Ver los 17 tratamientos del ensayo 2020–2021"):
-        st.dataframe(pd.DataFrame(treatments), width="stretch", hide_index=True)
 
-    st.info(
-        "La aplicación no elegirá una alternativa como ‘la mejor’ sin definir ambiente y objetivo. "
-        "Separará, como mínimo, costo por kg de materia seca, estabilidad entre campañas, duración, "
-        "aporte al bache invernal y resultado económico bajo precios actuales."
+elif pagina == "Costos y escenarios":
+    titulo_pagina(
+        "Evaluación económica",
+        "Costos y escenarios",
+        "Compará alternativas con precios vigentes y supuestos productivos explícitos. Los faltantes nunca se reemplazan por cero.",
     )
-
-with costs_tab:
     if not alternatives:
-        st.warning("No hay alternativas cargadas.")
+        st.warning("No hay alternativas productivas cargadas.")
     else:
-        labels = {item.name: item.alternative_id for item in alternatives}
-        selected_name = st.selectbox("Alternativa", list(labels))
-        selected_alternative = next(item for item in alternatives if item.alternative_id == labels[selected_name])
-        rate_percent = st.number_input("Tasa de descuento anual (%)", 0.0, 200.0, 10.0, 0.5)
-        default_yield = float(selected_alternative.yield_dm_kg_ha or 0)
-        yield_value = st.number_input(
-            "Rendimiento anual (kg MS/ha)",
+        nombres = {item.name: item.alternative_id for item in alternatives}
+        seleccion = st.selectbox("Alternativa a evaluar", list(nombres))
+        alternativa = next(item for item in alternatives if item.alternative_id == nombres[seleccion])
+        controles = st.columns(3)
+        tasa = controles[0].number_input(
+            "Tasa de descuento anual (%)", min_value=0.0, max_value=200.0, value=10.0, step=0.5
+        )
+        rendimiento = controles[1].number_input(
+            "Rendimiento esperado (kg MS/ha)",
             min_value=0.0,
-            value=default_yield,
+            value=float(alternativa.yield_dm_kg_ha or 0),
             step=100.0,
-            help=(
-                f"Referencia histórica: {selected_alternative.yield_low_dm_kg_ha or 's/d'} a "
-                f"{selected_alternative.yield_high_dm_kg_ha or 's/d'} kg MS/ha."
-            ),
         )
-        result = pipeline.evaluate(labels[selected_name], rate_percent / 100, yield_value or None)
-        metrics = st.columns(5)
-        metrics[0].metric(
-            "Costo presente/ha",
-            "Pendiente" if not result.cost_complete else f"$ {result.present_value_cost_ha:,.0f}",
+        controles[2].metric("Vida útil considerada", f"{alternativa.useful_life_years} año(s)")
+        resultado = pipeline.evaluate(alternativa.alternative_id, tasa / 100, rendimiento or None)
+        resultados = st.columns(4)
+        resultados[0].metric(
+            "Costo presente por ha",
+            moneda(resultado.present_value_cost_ha) if resultado.cost_complete else "Pendiente",
         )
-        metrics[1].metric(
-            "Costo anual equivalente/ha",
-            "Pendiente" if not result.cost_complete else f"$ {result.equivalent_annual_cost_ha:,.0f}",
+        resultados[1].metric(
+            "Costo anual equivalente",
+            moneda(resultado.equivalent_annual_cost_ha) if resultado.cost_complete else "Pendiente",
         )
-        metrics[2].metric(
-            "Costo/kg MS producida",
-            "Pendiente" if result.cost_per_kg_produced_dm is None else f"$ {result.cost_per_kg_produced_dm:,.2f}",
+        resultados[2].metric(
+            "Costo por kg MS aprovechada", moneda(resultado.cost_per_kg_usable_dm, decimales=2)
         )
-        metrics[3].metric(
-            "Costo/kg MS aprovechada",
-            "Pendiente" if result.cost_per_kg_usable_dm is None else f"$ {result.cost_per_kg_usable_dm:,.2f}",
+        resultados[3].metric(
+            "Costo por kg de carne equivalente",
+            moneda(resultado.cost_per_kg_meat_equivalent, decimales=2),
         )
-        metrics[4].metric(
-            "Costo/kg carne equivalente",
-            "Pendiente" if result.cost_per_kg_meat_equivalent is None else f"$ {result.cost_per_kg_meat_equivalent:,.2f}",
+        if resultado.missing_inputs:
+            st.warning(
+                "Faltan precios o parámetros para cerrar el cálculo: "
+                + "; ".join(resultado.missing_inputs)
+                + ". Completalos en Carga manual."
+            )
+        else:
+            st.success("El cálculo utiliza todos los precios y parámetros necesarios.")
+
+        st.subheader("Sensibilidad al rendimiento")
+        rendimientos = sorted(
+            {
+                valor
+                for valor in (
+                    alternativa.yield_low_dm_kg_ha,
+                    alternativa.yield_dm_kg_ha,
+                    alternativa.yield_high_dm_kg_ha,
+                    rendimiento,
+                )
+                if valor is not None and valor > 0
+            }
         )
-        if result.missing_inputs:
-            st.warning("Faltan datos para cerrar el cálculo: " + "; ".join(result.missing_inputs))
-        st.subheader("Costos computados por año")
-        st.dataframe(
-            pd.DataFrame(
-                [{"Año": year, "Costo": value} for year, value in result.cash_costs_by_year.items()]
-            ),
+        escenarios = []
+        for valor in rendimientos:
+            evaluacion = pipeline.evaluate(alternativa.alternative_id, tasa / 100, valor)
+            escenarios.append(
+                {
+                    "Rendimiento (kg MS/ha)": valor,
+                    "Costo por kg MS aprovechada": evaluacion.cost_per_kg_usable_dm,
+                    "Costo anual por ha": evaluacion.equivalent_annual_cost_ha if evaluacion.cost_complete else None,
+                }
+            )
+        escenario_frame = pd.DataFrame(escenarios)
+        if not escenario_frame.empty and escenario_frame["Costo por kg MS aprovechada"].notna().any():
+            figura = px.line(
+                escenario_frame,
+                x="Rendimiento (kg MS/ha)",
+                y="Costo por kg MS aprovechada",
+                markers=True,
+                color_discrete_sequence=["#23624e"],
+            )
+            figura.update_layout(margin=dict(l=10, r=10, t=20, b=10), yaxis_title="ARS por kg MS")
+            st.plotly_chart(figura, width="stretch")
+        else:
+            st.info("La sensibilidad aparecerá cuando se completen los precios de los insumos.")
+        with st.expander("Ver costos por año"):
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {"Año del proyecto": año, "Costo estimado": costo}
+                        for año, costo in resultado.cash_costs_by_year.items()
+                    ]
+                ),
+                width="stretch",
+                hide_index=True,
+            )
+
+
+elif pagina == "Mercados A3":
+    titulo_pagina(
+        "Información de mercado",
+        "Futuros y opciones de A3",
+        "Consultá precios de ajuste, vencimientos, volumen e interés abierto. La información pública se actualiza automáticamente; el reporte autenticado se habilita mediante un secreto privado.",
+    )
+    futuros = [fila for fila in quotes if fila.get("instrument_type") == "future"]
+    opciones = [fila for fila in quotes if fila.get("instrument_type") == "option"]
+    cabecera = st.columns(3)
+    cabecera[0].metric("Futuros disponibles", len(futuros))
+    cabecera[1].metric("Opciones disponibles", len(opciones))
+    cabecera[2].metric("API autenticada", "Configurada" if os.getenv("A3_MD_API_KEY") else "Sin clave activa")
+
+    tab_futuros, tab_opciones, tab_oficial = st.tabs(
+        ["Curva de futuros", "Opciones", "Reporte autenticado"]
+    )
+    with tab_futuros:
+        if not futuros:
+            st.info("Todavía no hay futuros cargados. Presioná Actualizar todas las fuentes.")
+        else:
+            productos = sorted({nombre_producto(fila.get("underlying", "")) for fila in futuros})
+            producto = st.selectbox("Producto", productos, key="producto_futuros")
+            seleccionados = [fila for fila in futuros if nombre_producto(fila.get("underlying", "")) == producto]
+            curva = build_forward_curve(seleccionados)
+            if curva:
+                curva_frame = pd.DataFrame(curva).rename(
+                    columns={
+                        "symbol": "Contrato",
+                        "maturity_date": "Vencimiento",
+                        "future_price": "Precio futuro",
+                        "basis": "Base",
+                    }
+                )
+                curva_frame["Vencimiento"] = pd.to_datetime(curva_frame["Vencimiento"], errors="coerce")
+                figura = px.line(
+                    curva_frame,
+                    x="Vencimiento",
+                    y="Precio futuro",
+                    markers=True,
+                    hover_name="Contrato",
+                    color_discrete_sequence=["#23624e"],
+                )
+                figura.update_layout(margin=dict(l=10, r=10, t=20, b=10), yaxis_title="USD por tonelada")
+                st.plotly_chart(figura, width="stretch")
+            tabla_futuros = pd.DataFrame(
+                [
+                    {
+                        "Producto": nombre_producto(fila.get("underlying", "")),
+                        "Contrato": fila.get("symbol"),
+                        "Vencimiento": fila.get("maturity_date"),
+                        "Precio de referencia": precio_referencia(fila),
+                        "Volumen": fila.get("volume"),
+                        "Interés abierto": fila.get("open_interest"),
+                    }
+                    for fila in seleccionados
+                ]
+            )
+            st.dataframe(tabla_futuros, width="stretch", hide_index=True)
+            st.caption("La curva refleja precios negociados para vencimientos futuros; no constituye una proyección garantizada.")
+
+    with tab_opciones:
+        if not opciones:
+            st.info("Todavía no hay opciones cargadas.")
+        else:
+            productos_opciones = sorted({nombre_producto(fila.get("underlying", "")) for fila in opciones})
+            producto_opcion = st.selectbox("Producto", productos_opciones, key="producto_opciones")
+            tasa_libre = st.number_input(
+                "Tasa anual para calcular volatilidad implícita (%)", 0.0, 300.0, 10.0, 0.5
+            ) / 100
+            future_map = {
+                (fila.get("symbol"), fila.get("maturity_date")): precio_referencia(fila)
+                for fila in futuros
+            }
+            filas = []
+            for fila in opciones:
+                if nombre_producto(fila.get("underlying", "")) != producto_opcion:
+                    continue
+                futuro = future_map.get((fila.get("underlying"), fila.get("maturity_date")))
+                volatilidad = option_implied_volatility(fila, futuro, risk_free_rate=tasa_libre) if futuro else None
+                filas.append(
+                    {
+                        "Contrato": fila.get("symbol"),
+                        "Tipo": "Compra" if fila.get("option_type") == "call" else "Venta",
+                        "Precio de ejercicio": fila.get("strike"),
+                        "Precio de referencia": precio_referencia(fila),
+                        "Futuro comparable": futuro,
+                        "Volatilidad implícita": volatilidad,
+                        "Volumen": fila.get("volume"),
+                    }
+                )
+            st.dataframe(pd.DataFrame(filas), width="stretch", hide_index=True)
+
+    with tab_oficial:
+        ruta_oficial = pipeline.paths.official_a3_snapshot
+        if ruta_oficial.exists():
+            documento = json.loads(ruta_oficial.read_text(encoding="utf-8"))
+            st.success(f"Reporte autenticado disponible para {documento.get('report_date', 'fecha no identificada')}.")
+            datos = documento.get("data")
+            if isinstance(datos, list):
+                st.dataframe(pd.json_normalize(datos), width="stretch", hide_index=True)
+            elif isinstance(datos, dict):
+                st.dataframe(pd.json_normalize([datos]), width="stretch", hide_index=True)
+        else:
+            st.info("No hay un reporte autenticado guardado. Para habilitarlo se necesita una clave UAT nueva configurada como secreto.")
+
+
+elif pagina == "Carga manual":
+    titulo_pagina(
+        "Datos que requieren validación local",
+        "Carga manual",
+        "Completá sólo la información que no puede obtenerse automáticamente: presupuestos locales y supuestos productivos. Cada valor queda fechado y puede descargarse como respaldo.",
+    )
+    tab_precios, tab_supuestos = st.tabs(["Precios e insumos", "Supuestos productivos"])
+    with tab_precios:
+        catalogo = read_rows(ROOT / "data" / "manual" / "manual_prices.csv")
+        ultimos = {fila["series_id"]: fila for fila in prices if fila.get("source") == "manual"}
+        filas_editor = []
+        for item in catalogo:
+            codigo = str(item.get("series_id", "")).strip()
+            if not codigo:
+                continue
+            ultimo = ultimos.get(codigo, {})
+            fecha_valor = ultimo.get("observed_at") or item.get("observed_at") or date.today().isoformat()
+            filas_editor.append(
+                {
+                    "Código": codigo,
+                    "Insumo": item.get("item") or ultimo.get("item") or codigo,
+                    "Precio unitario": numero(ultimo.get("value")) or numero(item.get("value")),
+                    "Moneda": ultimo.get("currency") or item.get("currency") or "ARS",
+                    "Unidad": ultimo.get("unit") or item.get("unit") or "",
+                    "Fecha": pd.to_datetime(fecha_valor, errors="coerce").date(),
+                    "Observación": item.get("notes", ""),
+                }
+            )
+        editor = st.data_editor(
+            pd.DataFrame(filas_editor),
             width="stretch",
             hide_index=True,
+            num_rows="fixed",
+            disabled=["Código", "Insumo"],
+            column_config={
+                "Precio unitario": st.column_config.NumberColumn(min_value=0.0, format="%.2f"),
+                "Moneda": st.column_config.SelectboxColumn(options=["ARS", "USD"]),
+                "Fecha": st.column_config.DateColumn(format="DD/MM/YYYY"),
+                "Observación": st.column_config.TextColumn(width="large"),
+            },
+            key="editor_precios_manuales",
+        )
+        acciones = st.columns([1, 1, 2])
+        if acciones[0].button("Guardar precios", type="primary", width="stretch"):
+            observaciones = []
+            for fila in editor.to_dict("records"):
+                valor = numero(fila.get("Precio unitario"))
+                if valor is None:
+                    continue
+                fecha_fila = fila.get("Fecha")
+                fecha_iso = fecha_fila.isoformat() if hasattr(fecha_fila, "isoformat") else pd.to_datetime(fecha_fila).date().isoformat()
+                observaciones.append(
+                    PriceObservation(
+                        observed_at=fecha_iso,
+                        series_id=str(fila["Código"]),
+                        item=str(fila["Insumo"]),
+                        value=valor,
+                        currency=str(fila.get("Moneda") or "ARS"),
+                        unit=str(fila.get("Unidad") or ""),
+                        source="manual",
+                        ingestion_method="formulario",
+                        metadata={"notes": str(fila.get("Observación") or "")},
+                    )
+                )
+            guardados = pipeline.save_manual_prices(observaciones)
+            st.success(f"Se guardaron {guardados} precios con su fecha y unidad.")
+        acciones[1].download_button(
+            "Descargar respaldo",
+            data=editor.to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"precios_manuales_{date.today().isoformat()}.csv",
+            mime="text/csv",
+            width="stretch",
         )
 
-with futures_tab:
-    futures = [row for row in quotes if row.get("instrument_type") == "future"]
-    if not futures:
-        st.info("Todavía no hay futuros cargados. Complete la watchlist de A3 o el CSV manual.")
-    else:
-        underlying_values = sorted({row.get("underlying") or "Sin clasificar" for row in futures})
-        underlying = st.selectbox("Subyacente", underlying_values)
-        selected = [row for row in futures if (row.get("underlying") or "Sin clasificar") == underlying]
-        spot = st.number_input("Precio disponible comparable (opcional)", min_value=0.0, value=0.0)
-        curve = build_forward_curve(selected, spot_price=spot or None)
-        frame = pd.DataFrame(curve)
-        if not frame.empty:
-            figure = px.line(frame, x="maturity_date", y="future_price", markers=True, hover_name="symbol")
-            figure.update_layout(xaxis_title="Vencimiento", yaxis_title="Precio")
-            st.plotly_chart(figure, width="stretch")
-            st.dataframe(frame, width="stretch", hide_index=True)
+        with st.expander("Agregar un insumo que no figura en la tabla"):
+            with st.form("nuevo_insumo"):
+                nombre = st.text_input("Nombre del insumo o labor")
+                columnas = st.columns(4)
+                valor = columnas[0].number_input("Precio unitario", min_value=0.0, value=0.0)
+                moneda_codigo = columnas[1].selectbox("Moneda", ["ARS", "USD"])
+                unidad = columnas[2].selectbox("Unidad", ["kg", "l", "ha", "t", "unidad"])
+                fecha_nueva = columnas[3].date_input("Fecha", value=date.today())
+                observacion = st.text_input("Observación opcional")
+                enviar = st.form_submit_button("Guardar nuevo insumo", type="primary")
+                if enviar:
+                    if not nombre.strip() or valor <= 0:
+                        st.error("Ingresá un nombre y un precio mayor que cero.")
+                    else:
+                        pipeline.save_manual_prices(
+                            [
+                                PriceObservation(
+                                    observed_at=fecha_nueva.isoformat(),
+                                    series_id=codigo_manual(nombre),
+                                    item=nombre.strip(),
+                                    value=float(valor),
+                                    currency=moneda_codigo,
+                                    unit=unidad,
+                                    source="manual",
+                                    ingestion_method="formulario",
+                                    metadata={"notes": observacion},
+                                )
+                            ]
+                        )
+                        st.success("El nuevo insumo quedó guardado.")
         st.caption(
-            "La curva es una referencia de precios pactados hoy. No equivale a una predicción pura: "
-            "también refleja base, tasa, acarreo, estacionalidad, cobertura y liquidez."
+            "En la copia de GitHub Desktop, los cambios quedan en el archivo local y en SQLite. En una publicación web conviene descargar el respaldo, porque el almacenamiento del servidor puede reiniciarse."
         )
 
-with options_tab:
-    option_rows = [row for row in quotes if row.get("instrument_type") == "option"]
-    future_rows = [row for row in quotes if row.get("instrument_type") == "future"]
-    if not option_rows or not future_rows:
-        st.info("Para calcular volatilidad implícita se necesitan opciones y el futuro correspondiente.")
-    else:
-        risk_free = st.number_input("Tasa libre de riesgo anual (%)", 0.0, 300.0, 10.0, 0.5) / 100
-        future_map = {
-            (row.get("symbol"), row.get("maturity_date")): next(
-                (float(row[key]) for key in ("settlement", "last") if row.get(key) is not None),
-                None,
-            )
-            for row in future_rows
+    with tab_supuestos:
+        supuestos = pd.DataFrame(
+            [
+                {
+                    "Código": item.alternative_id,
+                    "Alternativa": item.name,
+                    "Vida útil (años)": item.useful_life_years,
+                    "Rendimiento base": item.yield_dm_kg_ha,
+                    "Rendimiento mínimo": item.yield_low_dm_kg_ha,
+                    "Rendimiento máximo": item.yield_high_dm_kg_ha,
+                    "Aprovechamiento (%)": item.utilization_rate * 100 if item.utilization_rate is not None else None,
+                    "kg MS por kg de carne": item.conversion_kg_dm_per_kg_meat,
+                    "Ambiente": item.soil_position,
+                    "Sistema": item.establishment_system,
+                }
+                for item in alternatives
+            ]
+        )
+        editor_supuestos = st.data_editor(
+            supuestos,
+            width="stretch",
+            hide_index=True,
+            num_rows="fixed",
+            disabled=["Código", "Alternativa"],
+            column_config={
+                "Vida útil (años)": st.column_config.NumberColumn(min_value=1, step=1),
+                "Rendimiento base": st.column_config.NumberColumn(min_value=0.0, format="%.0f"),
+                "Rendimiento mínimo": st.column_config.NumberColumn(min_value=0.0, format="%.0f"),
+                "Rendimiento máximo": st.column_config.NumberColumn(min_value=0.0, format="%.0f"),
+                "Aprovechamiento (%)": st.column_config.NumberColumn(min_value=0.0, max_value=100.0),
+            },
+            key="editor_supuestos",
+        )
+        if st.button("Guardar supuestos", type="primary"):
+            originales = {item.alternative_id: item for item in alternatives}
+            editados = []
+            for fila in editor_supuestos.to_dict("records"):
+                original = originales[str(fila["Código"])]
+                aprovechamiento = numero(fila.get("Aprovechamiento (%)"))
+                editados.append(
+                    replace(
+                        original,
+                        useful_life_years=int(numero(fila.get("Vida útil (años)")) or 1),
+                        yield_dm_kg_ha=numero(fila.get("Rendimiento base")),
+                        yield_low_dm_kg_ha=numero(fila.get("Rendimiento mínimo")),
+                        yield_high_dm_kg_ha=numero(fila.get("Rendimiento máximo")),
+                        utilization_rate=aprovechamiento / 100 if aprovechamiento is not None else None,
+                        conversion_kg_dm_per_kg_meat=numero(fila.get("kg MS por kg de carne")),
+                        soil_position=str(fila.get("Ambiente") or ""),
+                        establishment_system=str(fila.get("Sistema") or ""),
+                    )
+                )
+            cantidad = pipeline.save_alternatives(editados)
+            st.success(f"Se guardaron los supuestos de {cantidad} alternativas.")
+        st.info(
+            "Los rendimientos históricos funcionan como punto de partida. Antes de una recomendación deben validarse según lote, ambiente, año y objetivo productivo."
+        )
+
+
+elif pagina == "Base regional":
+    titulo_pagina(
+        "Antecedentes técnicos",
+        "Base regional",
+        "Síntesis de información productiva y económica relevante para el sudoeste bonaerense. La pantalla prioriza los resultados y evita mostrar autores o nombres personales.",
+    )
+    observaciones = evidence_catalog.observations()
+    tratamientos = evidence_catalog.treatments()
+    cobertura = evidence_catalog.coverage()
+    resumen = st.columns(4)
+    resumen[0].metric("Conjuntos de antecedentes", cobertura["studies"])
+    resumen[1].metric("Observaciones catalogadas", cobertura["observations"])
+    resumen[2].metric("Años representados", cobertura["years"])
+    resumen[3].metric("Tratamientos productivos", cobertura["treatments"])
+
+    st.subheader("Costos históricos de implantación")
+    nombres_alternativas = {item.alternative_id: item.name for item in alternatives}
+    costos = [fila for fila in observaciones if fila.get("metric") == "implantation_cost"]
+    if costos:
+        frame_costos = pd.DataFrame(
+            [
+                {
+                    "Alternativa": nombres_alternativas.get(fila.get("alternative_id"), fila.get("alternative_id")),
+                    "Costo histórico por ha": numero(fila.get("value")),
+                    "Año": fila.get("year"),
+                }
+                for fila in costos
+            ]
+        )
+        figura_costos = px.bar(
+            frame_costos,
+            x="Alternativa",
+            y="Costo histórico por ha",
+            color_discrete_sequence=["#3f8a6b"],
+        )
+        figura_costos.update_layout(margin=dict(l=10, r=10, t=20, b=10), xaxis_title="")
+        st.plotly_chart(figura_costos, width="stretch")
+        st.caption("Valores nominales históricos. No deben compararse con precios actuales sin actualización.")
+
+    st.subheader("Campañas productivas observadas")
+    campañas = [fila for fila in observaciones if str(fila.get("observation_id", "")).startswith("mean_yield_")]
+    if campañas:
+        frame_campañas = pd.DataFrame(
+            [
+                {
+                    "Campaña": fila.get("year"),
+                    "Rendimiento medio (kg MS/ha)": numero(fila.get("value")),
+                    "Precipitación (mm)": numero(fila.get("rainfall_mm")),
+                }
+                for fila in campañas
+            ]
+        )
+        figura_campañas = px.scatter(
+            frame_campañas,
+            x="Precipitación (mm)",
+            y="Rendimiento medio (kg MS/ha)",
+            text="Campaña",
+            color_discrete_sequence=["#23624e"],
+        )
+        figura_campañas.update_traces(marker={"size": 16})
+        figura_campañas.update_layout(margin=dict(l=10, r=10, t=20, b=10))
+        st.plotly_chart(figura_campañas, width="stretch")
+        st.caption("La cantidad de campañas es reducida: la relación observada sirve como referencia, no como estimación causal.")
+
+    with st.expander("Ver tratamientos relevados"):
+        tabla_tratamientos = pd.DataFrame(
+            [
+                {
+                    "Tratamiento": fila.get("treatment"),
+                    "Especie principal": fila.get("grass_species"),
+                    "Cultivar": fila.get("grass_cultivar"),
+                    "Dosis principal (kg/ha)": numero(fila.get("grass_dose_kg_ha")),
+                    "Leguminosa": fila.get("vicia_species"),
+                    "Dosis de leguminosa (kg/ha)": numero(fila.get("vicia_dose_kg_ha")),
+                }
+                for fila in tratamientos
+            ]
+        )
+        st.dataframe(tabla_tratamientos, width="stretch", hide_index=True)
+
+
+elif pagina == "Calidad de datos":
+    titulo_pagina(
+        "Transparencia y control",
+        "Calidad de datos",
+        "Revisá qué fuente se actualizó, qué requiere credenciales y qué valores todavía dependen de una carga manual.",
+    )
+    estados = [
+        {
+            "Fuente": FUENTES.get(fila["source"], fila["source"]),
+            "Estado": ESTADOS.get(fila["status"], fila["status"]),
+            "Última ejecución": fecha_visible(fila["finished_at"]),
+            "Registros": fila["rows_written"],
         }
-        enriched = []
-        for row in option_rows:
-            future_price = future_map.get((row.get("underlying"), row.get("maturity_date")))
-            implied = option_implied_volatility(row, future_price, risk_free_rate=risk_free) if future_price else None
-            enriched.append({**row, "future_price": future_price, "implied_volatility": implied})
-        st.dataframe(pd.DataFrame(enriched), width="stretch", hide_index=True)
-        st.caption("Una opción sin precio, strike, tipo, vencimiento o futuro comparable queda sin cálculo.")
+        for fila in sync_status
+    ]
+    if estados:
+        st.dataframe(pd.DataFrame(estados), width="stretch", hide_index=True)
+    else:
+        st.info("Todavía no hay procesos registrados.")
 
-with data_tab:
-    st.subheader("Últimos precios")
-    if prices:
-        st.dataframe(pd.DataFrame(prices), width="stretch", hide_index=True)
-    else:
-        st.info("Todavía no se importaron precios válidos.")
-    st.subheader("Últimas cotizaciones A3")
-    if quotes:
-        st.dataframe(pd.DataFrame(quotes), width="stretch", hide_index=True)
-    else:
-        st.info("Todavía no se importaron cotizaciones.")
+    cobertura = st.columns(3)
+    cobertura[0].metric("Series de precios vigentes", len([fila for fila in prices if fila.get("value") is not None]))
+    cobertura[1].metric("Cotizaciones A3", len(quotes))
+    cobertura[2].metric(
+        "Alternativas por validar", sum(item.validation_status.lower() != "validado" for item in alternatives)
+    )
 
-with quality_tab:
-    st.subheader("Estado de las fuentes")
-    if sync_status:
-        st.dataframe(pd.DataFrame(sync_status), width="stretch", hide_index=True)
-    else:
-        st.info("Aún no se ejecutó ninguna actualización.")
-    st.subheader("Supuestos técnicos")
-    st.dataframe(pd.DataFrame([asdict(item) for item in alternatives]), width="stretch", hide_index=True)
+    st.subheader("Credenciales opcionales")
+    credenciales = pd.DataFrame(
+        [
+            {
+                "Integración": "Reporte formal A3",
+                "Estado": "Configurada" if os.getenv("A3_MD_API_KEY") else "Falta clave privada",
+                "Variable": "A3_MD_API_KEY",
+            },
+            {
+                "Integración": "SIO-Granos",
+                "Estado": "Configurada" if os.getenv("SIO_TOKEN") and os.getenv("SIO_CUIT") else "Faltan token y CUIT",
+                "Variable": "SIO_TOKEN + SIO_CUIT",
+            },
+            {
+                "Integración": "A3 Trading en tiempo real",
+                "Estado": "Configurada" if os.getenv("A3_USERNAME") and os.getenv("A3_PASSWORD") else "Sin credenciales",
+                "Variable": "A3_USERNAME + A3_PASSWORD",
+            },
+        ]
+    )
+    st.dataframe(credenciales, width="stretch", hide_index=True)
+    st.caption("La pantalla informa si una credencial existe, pero nunca muestra su contenido.")
+
+    with st.expander("Detalle técnico de las últimas conexiones"):
+        detalles = pd.DataFrame(sync_status)
+        if not detalles.empty:
+            detalles = detalles.rename(
+                columns={
+                    "source": "fuente",
+                    "started_at": "inicio",
+                    "finished_at": "fin",
+                    "status": "estado",
+                    "rows_written": "registros",
+                    "message": "detalle",
+                }
+            )
+            columnas = [columna for columna in ["fuente", "inicio", "fin", "estado", "registros", "detalle"] if columna in detalles]
+            st.dataframe(detalles[columnas], width="stretch", hide_index=True)
+
+
+st.divider()
+st.caption(
+    "Prototipo académico de apoyo a la evaluación. Las decisiones productivas y comerciales requieren validación técnica y revisión de la calidad de cada dato."
+)
