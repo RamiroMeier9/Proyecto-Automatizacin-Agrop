@@ -18,11 +18,13 @@ from .csv_io import (
     read_manual_prices,
     read_recipes,
     read_watchlist,
+    write_alternatives,
     write_instruments,
+    write_manual_prices,
 )
 from .economics import evaluate_alternative
 from .env import load_dotenv
-from .models import A3Quote, EvaluationResult, PriceObservation
+from .models import A3Quote, Alternative, EvaluationResult, PriceObservation
 from .storage import Storage
 
 
@@ -186,6 +188,72 @@ class Pipeline:
             "a3_quotes": quote_count,
             "skipped": skipped,
         }
+
+    def import_public_snapshot(self) -> dict:
+        """Carga en SQLite el último archivo público versionado por GitHub Actions."""
+        if not self.paths.public_snapshot.exists():
+            return {"prices": 0, "a3_quotes": 0, "status": "missing"}
+        document = json.loads(self.paths.public_snapshot.read_text(encoding="utf-8"))
+        prices = [
+            PriceObservation(
+                observed_at=str(row.get("observed_at", "")),
+                series_id=str(row.get("series_id", "")),
+                item=str(row.get("item", "")),
+                value=float(row["value"]),
+                currency=str(row.get("currency", "")),
+                unit=str(row.get("unit", "")),
+                source=str(row.get("source", "public_snapshot")),
+                source_url=str(row.get("source_url", "")),
+                ingestion_method="snapshot_publico",
+                metadata=dict(row.get("metadata") or {}),
+            )
+            for row in document.get("prices", [])
+            if row.get("observed_at") and row.get("series_id") and row.get("value") is not None
+        ]
+        quotes = [
+            A3Quote(
+                as_of=str(row.get("as_of", "")),
+                symbol=str(row.get("symbol", "")),
+                market_id=str(row.get("market_id", "A3")),
+                instrument_type=str(row.get("instrument_type", "unknown")),
+                underlying=str(row.get("underlying", "")),
+                maturity_date=str(row.get("maturity_date", "")),
+                strike=row.get("strike"),
+                option_type=str(row.get("option_type", "")),
+                currency=str(row.get("currency", "")),
+                unit=str(row.get("unit", "")),
+                bid=row.get("bid"),
+                ask=row.get("ask"),
+                last=row.get("last"),
+                settlement=row.get("settlement"),
+                open_interest=row.get("open_interest"),
+                volume=row.get("volume"),
+                source_url=str(row.get("source_url", "")),
+                ingestion_method="snapshot_publico",
+                metadata=dict(row.get("metadata") or {}),
+            )
+            for row in document.get("a3_quotes", [])
+            if row.get("as_of") and row.get("symbol")
+        ]
+        return {
+            "prices": self.storage.upsert_prices(prices),
+            "a3_quotes": self.storage.upsert_a3_quotes(quotes),
+            "status": "ok",
+        }
+
+    def save_manual_prices(self, observations: list[PriceObservation]) -> int:
+        """Guarda precios manuales en la base y en el CSV editable del proyecto."""
+        if not observations:
+            return 0
+        count = self.storage.upsert_prices(observations)
+        write_manual_prices(self.paths.manual_dir / "manual_prices.csv", observations)
+        self.write_snapshot()
+        return count
+
+    def save_alternatives(self, alternatives: list[Alternative]) -> int:
+        """Persiste supuestos técnicos editados por el usuario."""
+        write_alternatives(self.paths.manual_dir / "alternatives.csv", alternatives)
+        return len(alternatives)
 
     def _update_a3_official_report(self) -> dict:
         """Consulta la API-Key formal y conserva la respuesta fuera del repositorio."""
