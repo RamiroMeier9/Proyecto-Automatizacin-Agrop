@@ -17,6 +17,11 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Se carga desde Settings > Secrets and variables > Actions.
+      # La clave nunca se escribe en el repositorio ni en los logs.
+      A3_MD_ENV: uat
+      A3_MD_API_KEY: ${{ secrets.A3_MD_API_KEY }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
