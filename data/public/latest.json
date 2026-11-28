@@ -958,35 +958,6 @@
       "volume": 5.0
     },
     {
-      "as_of": "2026-11-17T00:00:00",
-      "ask": null,
-      "bid": null,
-      "currency": "USD",
-      "ingestion_method": "api",
-      "instrument_type": "option",
-      "last": 0.7,
-      "market_id": "A3",
-      "maturity_date": "2027-04-30",
-      "metadata": {
-        "high": 0.7,
-        "low": 0.7,
-        "maturity_date_precision": "contract_month_end_proxy",
-        "open": 0.7,
-        "previous_settlement": 0.523146,
-        "trades": 1,
-        "variation_pct": -18.827822
-      },
-      "open_interest": 192.0,
-      "option_type": "call",
-      "settlement": 0.424649,
-      "source_url": "https://marketdata.mae.com.ar/",
-      "strike": 220.0,
-      "symbol": "MAI.ROS/ABR27 220 C",
-      "underlying": "MAI.ROS/ABR27",
-      "unit": "USD/t",
-      "volume": 5.0
-    },
-    {
       "as_of": "2026-11-18T00:00:00",
       "ask": null,
       "bid": null,
@@ -3249,64 +3220,6 @@
       "volume": 8.0
     },
     {
-      "as_of": "2026-11-17T00:00:00",
-      "ask": null,
-      "bid": null,
-      "currency": "USD",
-      "ingestion_method": "api",
-      "instrument_type": "option",
-      "last": 0.4,
-      "market_id": "A3",
-      "maturity_date": "2026-12-31",
-      "metadata": {
-        "high": 0.4,
-        "low": 0.4,
-        "maturity_date_precision": "contract_month_end_proxy",
-        "open": 0.4,
-        "previous_settlement": 1.9289,
-        "trades": 1,
-        "variation_pct": -83.750168
-      },
-      "open_interest": 10.0,
-      "option_type": "put",
-      "settlement": 0.313443,
-      "source_url": "https://marketdata.mae.com.ar/",
-      "strike": 192.0,
-      "symbol": "TRI.ROS/DIC26 192 P",
-      "underlying": "TRI.ROS/DIC26",
-      "unit": "USD/t",
-      "volume": 3.0
-    },
-    {
-      "as_of": "2026-11-17T00:00:00",
-      "ask": null,
-      "bid": null,
-      "currency": "USD",
-      "ingestion_method": "api",
-      "instrument_type": "option",
-      "last": 2.5,
-      "market_id": "A3",
-      "maturity_date": "2026-12-31",
-      "metadata": {
-        "high": 2.5,
-        "low": 2.2,
-        "maturity_date_precision": "contract_month_end_proxy",
-        "open": 2.2,
-        "previous_settlement": 4.566184,
-        "trades": 2,
-        "variation_pct": -67.819212
-      },
-      "open_interest": 30.0,
-      "option_type": "put",
-      "settlement": 1.469434,
-      "source_url": "https://marketdata.mae.com.ar/",
-      "strike": 196.0,
-      "symbol": "TRI.ROS/DIC26 196 P",
-      "underlying": "TRI.ROS/DIC26",
-      "unit": "USD/t",
-      "volume": 8.0
-    },
-    {
       "as_of": "2026-11-18T00:00:00",
       "ask": null,
       "bid": null,
@@ -3363,35 +3276,6 @@
       "underlying": "TRI.ROS/DIC26",
       "unit": "USD/t",
       "volume": 10.0
-    },
-    {
-      "as_of": "2026-11-17T00:00:00",
-      "ask": null,
-      "bid": null,
-      "currency": "USD",
-      "ingestion_method": "api",
-      "instrument_type": "option",
-      "last": 13.5,
-      "market_id": "A3",
-      "maturity_date": "2026-12-31",
-      "metadata": {
-        "high": 13.5,
-        "low": 13.5,
-        "maturity_date_precision": "contract_month_end_proxy",
-        "open": 13.5,
-        "previous_settlement": 16.0,
-        "trades": 3,
-        "variation_pct": -28.116781
-      },
-      "open_interest": 127.0,
-      "option_type": "put",
-      "settlement": 11.501315,
-      "source_url": "https://marketdata.mae.com.ar/",
-      "strike": 208.0,
-      "symbol": "TRI.ROS/DIC26 208 P",
-      "underlying": "TRI.ROS/DIC26",
-      "unit": "USD/t",
-      "volume": 8.0
     },
     {
       "as_of": "2026-11-20T00:00:00",
@@ -3916,35 +3800,6 @@
       "volume": 10.0
     },
     {
-      "as_of": "2026-11-17T00:00:00",
-      "ask": null,
-      "bid": null,
-      "currency": "USD",
-      "ingestion_method": "api",
-      "instrument_type": "option",
-      "last": 7.0,
-      "market_id": "A3",
-      "maturity_date": "2027-07-31",
-      "metadata": {
-        "high": 7.0,
-        "low": 7.0,
-        "maturity_date_precision": "contract_month_end_proxy",
-        "open": 7.0,
-        "previous_settlement": 0.0,
-        "trades": 1,
-        "variation_pct": 0.0
-      },
-      "open_interest": 10.0,
-      "option_type": "put",
-      "settlement": 6.636366,
-      "source_url": "https://marketdata.mae.com.ar/",
-      "strike": 204.0,
-      "symbol": "TRI.ROS/JUL27 204 P",
-      "underlying": "TRI.ROS/JUL27",
-      "unit": "USD/t",
-      "volume": 10.0
-    },
-    {
       "as_of": "2026-11-26T00:00:00",
       "ask": null,
       "bid": null,
@@ -4324,7 +4179,7 @@
   ],
   "latest_data_dates": {
     "a3_public": "2026-11-26T00:00:00",
-    "bcra": "2026-11-26"
+    "bcra": "2026-11-27"
   },
   "prices": [
     {
@@ -4333,14 +4188,14 @@
       "item": "Tipo de cambio BCRA EUR",
       "metadata": {
         "descripcion": "EURO",
-        "tipo_pase": 1.0971
+        "tipo_pase": 1.0937
       },
-      "observed_at": "2026-11-26",
+      "observed_at": "2026-11-27",
       "series_id": "FX_BCRA_EUR_ARS",
       "source": "bcra",
       "source_url": "https://api.bcra.gob.ar/estadisticascambiarias/v1.0/Cotizaciones",
       "unit": "ARS/EUR",
-      "value": 1757.00565
+      "value": 1755.3885
     },
     {
       "currency": "ARS",
@@ -4350,12 +4205,12 @@
         "descripcion": "DOLAR E.E.U.U.",
         "tipo_pase": 0.0
       },
-      "observed_at": "2026-11-26",
+      "observed_at": "2026-11-27",
       "series_id": "FX_BCRA_USD_ARS",
       "source": "bcra",
       "source_url": "https://api.bcra.gob.ar/estadisticascambiarias/v1.0/Cotizaciones",
       "unit": "ARS/USD",
-      "value": 1601.5
+      "value": 1605.0
     }
   ],
   "schema_version": 1
